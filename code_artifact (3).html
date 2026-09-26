@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#4f46e5">
+    <title>Классный фонд</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; }
+        body { background: #f4f6fb; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 16px; }
+        .app-wrapper {
+            max-width: 420px; width: 100%; background: #f8fafc; border-radius: 32px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08); overflow: hidden; position: relative;
+            height: 780px; display: flex; flex-direction: column; border: 1px solid rgba(226,232,240,0.6);
+            transition: transform 0.2s ease;
+        }
+        .content-area { flex: 1; overflow-y: auto; padding-bottom: 80px; scroll-behavior: smooth; }
+
+        .bottom-nav {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            background: rgba(255,255,255,0.9); backdrop-filter: blur(8px);
+            border-top: 1px solid #e9edf4; display: flex; justify-content: space-around;
+            align-items: center; height: 68px; padding-bottom: 6px; box-shadow: 0 -6px 20px rgba(0,0,0,0.02); z-index: 20;
+        }
+        .nav-btn { background: transparent; border: none; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; font-weight: 500; color: #94a3b8; transition: 0.2s; cursor: pointer; padding: 4px 12px; border-radius: 30px; }
+        .nav-btn i { font-size: 22px; margin-bottom: 1px; }
+        .nav-btn.active { color: #4f46e5; background: #eef2ff; }
+        .nav-btn span { font-size: 10px; letter-spacing: 0.3px; }
+
+        .dashboard-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 20px 4px; }
+        .dashboard-header h1 { font-size: 24px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
+        .settings-btn { background: white; border: 1px solid #e2e8f0; width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #64748b; font-size: 18px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.03); transition: 0.2s; }
+        .settings-btn:active { transform: scale(0.92); }
+        
+        .settings-menu { position: absolute; top: 70px; right: 20px; background: white; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); padding: 8px; z-index: 50; border: 1px solid #f1f5f9; width: 230px; opacity: 0; pointer-events: none; transform: translateY(-10px); transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .settings-menu.active { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        .settings-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: transparent; border: none; width: 100%; text-align: left; font-size: 14px; font-weight: 500; color: #334155; cursor: pointer; transition: 0.2s; }
+        .settings-item:hover { background: #f8fafc; }
+        .settings-item.danger { color: #dc2626; }
+        .settings-item i { width: 20px; text-align: center; font-size: 16px; }
+
+        .cloud-badge { display: flex; align-items: center; gap: 6px; padding: 6px 14px; margin: 0 16px 12px; background: #e0e7ff; color: #4f46e5; border-radius: 20px; font-size: 12px; font-weight: 600; width: fit-content; transition: 0.2s; }
+        .cloud-badge.syncing { background: #fef3c7; color: #d97706; }
+        .cloud-badge.error { background: #fee2e2; color: #dc2626; }
+
+        .balance-hero { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border-radius: 28px; padding: 24px 22px; margin: 4px 16px 20px; position: relative; overflow: hidden; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3); }
+        .balance-hero::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%); pointer-events: none; }
+        .balance-hero .label { opacity: 0.85; font-size: 14px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .balance-hero .amount { font-size: 40px; font-weight: 800; letter-spacing: -1px; display: flex; align-items: baseline; gap: 6px; }
+        .balance-hero .amount span { font-size: 24px; font-weight: 600; opacity: 0.9; }
+        .balance-hero i { position: absolute; right: -10px; bottom: -10px; font-size: 100px; opacity: 0.1; transform: rotate(-15deg); }
+
+        .quick-actions { display: flex; justify-content: space-between; padding: 0 20px; margin-bottom: 24px; gap: 8px; }
+        .action-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; border: none; background: transparent; cursor: pointer; }
+        .action-icon { width: 56px; height: 56px; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 22px; transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .action-btn:active .action-icon { transform: scale(0.9); }
+        .action-btn span { font-size: 12px; font-weight: 600; color: #475569; }
+        .icon-report { background: #eef2ff; color: #4f46e5; }
+        .icon-excel { background: #e8f5e9; color: #16a34a; }
+        .icon-collect { background: #fff7ed; color: #ea580c; }
+        .icon-expense { background: #fef2f2; color: #e11d48; }
+
+        .section-title { padding: 0 20px; font-weight: 700; color: #0f172a; margin-bottom: 12px; font-size: 18px; letter-spacing: -0.3px; }
+
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 16px 12px; }
+        .stat-box { background: white; border-radius: 20px; padding: 16px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 6px; }
+        .stat-box .stat-label { color: #64748b; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+        .stat-box .stat-label i { font-size: 16px; }
+        .stat-box .stat-number { font-size: 20px; font-weight: 700; color: #0f172a; }
+        .stat-box .stat-number.green { color: #16a34a; }
+        .stat-box .stat-number.red { color: #dc2626; }
+
+        .hidden-input { display: none; }
+
+        .student-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 16px; background: white; border-radius: 16px;
+            margin: 6px 12px; border: 1px solid #f0f4fc; cursor: pointer; transition: 0.15s;
+        }
+        .student-item:active { transform: scale(0.98); background: #fafcff; }
+        .student-item .name { font-weight: 500; color: #0f172a; display: flex; align-items: center; gap: 10px; }
+        .student-item .name .avatar {
+            width: 34px; height: 34px; background: #e0e7ff; color: #4f46e5;
+            border-radius: 40px; display: flex; align-items: center; justify-content: center;
+            font-weight: 600; font-size: 14px;
+        }
+        .student-item .debt-badge { font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 40px; }
+        .debt-badge.positive { background: #fee2e2; color: #b91c1c; }
+        .debt-badge.zero { background: #dcfce7; color: #15803d; }
+
+        .collection-card {
+            background: white; border-radius: 18px; padding: 16px;
+            margin: 8px 12px; border: 1px solid #eff2f9; position: relative;
+        }
+        .collection-card .top {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 8px; padding-right: 28px;
+        }
+        .collection-card .title { font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; }
+        .collection-card .amount {
+            background: #f1f5f9; padding: 4px 12px; border-radius: 40px;
+            font-weight: 600; color: #334155; font-size: 13px; white-space: nowrap;
+        }
+        .progress-bar { height: 8px; background: #f1f5f9; border-radius: 10px; margin: 12px 0 6px; overflow: hidden; }
+        .progress-bar .fill { height: 100%; background: #4f46e5; border-radius: 10px; transition: width 0.4s ease; }
+        .collection-card .stats { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #475569; }
+        .collection-card .stats .collected { display: flex; align-items: center; gap: 4px; font-weight: 500; }
+        .collection-card .stats .missing-badge { background: #fef2f2; color: #b91c1c; padding: 3px 10px; border-radius: 40px; font-weight: 600; font-size: 12px; }
+        .collection-card .stats .fully-paid { color: #15803d; display: flex; align-items: center; gap: 4px; font-weight: 600; }
+
+        .expense-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 16px; background: white; border-radius: 18px;
+            margin: 8px 12px; border: 1px solid #f0f4fc; border-left: 5px solid #e11d48;
+        }
+        .expense-item .info { flex: 1; min-width: 0; }
+        .expense-item .info .title { font-weight: 500; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; }
+        .expense-item .info .date { font-size: 12px; color: #64748b; margin-top: 2px; }
+        .expense-item .cost { font-weight: 700; color: #b91c1c; white-space: nowrap; margin: 0 12px; font-size: 16px; }
+
+        .action-del-btn, .action-edit-btn { background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; }
+        .action-del-btn { color: #ef4444; } .action-del-btn:hover { background: #fee2e2; }
+        .action-edit-btn { color: #3b82f6; } .action-edit-btn:hover { background: #dbeafe; }
+
+        .custom-dialog-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; animation: fadeIn 0.2s; }
+        .custom-dialog-box { background: white; border-radius: 28px; padding: 28px 24px; width: 100%; max-width: 320px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); text-align: center; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .custom-dialog-box h3 { margin-top: 0; margin-bottom: 12px; color: #0f172a; font-size: 20px; font-weight: 700; }
+        .custom-dialog-box p { color: #475569; margin-bottom: 24px; font-size: 15px; line-height: 1.5; }
+        .custom-dialog-box input { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 16px; margin-bottom: 24px; font-size: 16px; text-align: center; background: #f8fafc; font-weight: 500; transition: border-color 0.2s; }
+        .custom-dialog-box input:focus { outline: none; border-color: #4f46e5; }
+        .custom-dialog-actions { display: flex; gap: 12px; justify-content: center; }
+        .custom-dialog-actions button { flex: 1; padding: 14px; border-radius: 16px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 15px; }
+        .custom-dialog-actions .btn-cancel { background: #f1f5f9; color: #475569; }
+        .custom-dialog-actions .btn-cancel:active { background: #e2e8f0; }
+        .custom-dialog-actions .btn-confirm { background: #4f46e5; color: white; }
+        .custom-dialog-actions .btn-confirm:active { background: #4338ca; }
+        .custom-dialog-actions .btn-danger { background: #ef4444; color: white; }
+        .custom-dialog-actions .btn-danger:active { background: #dc2626; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .report-modal { position: absolute; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+        .report-modal-content { background: white; border-radius: 32px; max-width: 100%; width: 100%; max-height: 90%; overflow-y: auto; padding: 24px; box-shadow: 0 30px 50px rgba(0,0,0,0.3); position: relative; }
+        .report-modal-content .close-btn { position: sticky; top: 0; float: right; background: #f1f5f9; border: none; width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #1e293b; margin-bottom: 12px; z-index: 10; transition: 0.2s; }
+        .report-modal-content h1 { font-size: 24px; margin-top: 0; font-weight: 800; color: #0f172a; }
+        .report-modal-content h2 { font-size: 18px; margin: 20px 0 12px; color: #334155; }
+        .report-modal-content table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .report-modal-content th { background: #f8fafc; padding: 10px 8px; text-align: left; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: 600; }
+        .report-modal-content td { padding: 8px; border-bottom: 1px solid #f1f5f9; color: #1e293b; }
+        .report-modal-content .summary { display: flex; flex-wrap: wrap; gap: 12px; background: #f8fafc; padding: 16px; border-radius: 20px; margin-top: 20px; border: 1px solid #e2e8f0; }
+        .report-modal-content .summary-item { font-weight: 600; font-size: 15px; color: #0f172a; width: 100%; display: flex; justify-content: space-between; }
+        .report-modal-content .button-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; justify-content: center; }
+        .report-modal-content .button-row button { flex: 1; min-width: 100px; padding: 12px 14px; border: none; border-radius: 16px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
+        .report-modal-content .button-row .btn-share { background: #4f46e5; color: white; }
+        .report-modal-content .button-row .btn-download { background: #dcfce7; color: #166534; }
+        .report-modal-content .button-row .btn-copy { background: #dbeafe; color: #1e40af; }
+        .report-modal-content .button-row .btn-pdf { background: #fee2e2; color: #991b1b; }
+        .report-modal-content .button-row .btn-image { background: #ffedd5; color: #9a3412; }
+
+        .profile-slide { position: absolute; inset: 0; background: #f8fafc; z-index: 40; display: flex; flex-direction: column; animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        .profile-header { background: #4f46e5; color: white; padding: 20px; display: flex; align-items: center; gap: 16px; }
+        .profile-header button { background: rgba(255,255,255,0.2); border: none; width: 40px; height: 40px; border-radius: 50%; color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .profile-header .pname { font-weight: 700; font-size: 20px; letter-spacing: -0.5px; }
+        .profile-content { flex: 1; overflow-y: auto; padding: 16px 0 80px; }
+        .collection-row { background: white; border-radius: 20px; padding: 16px; margin: 8px 16px; border: 1px solid #e2e8f0; }
+        .collection-row .row-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .collection-row .row-top .col-title { font-weight: 600; color: #0f172a; font-size: 15px; }
+        .collection-row .row-top .col-status { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 40px; }
+        .collection-row .progress-small { height: 6px; background: #f1f5f9; border-radius: 10px; margin: 12px 0 8px; overflow: hidden; }
+        .collection-row .progress-small .fill { height: 100%; background: #4f46e5; border-radius: 10px; }
+        .collection-row .actions { display: flex; gap: 8px; margin-top: 12px; }
+        .collection-row .actions button { flex: 1; padding: 10px; border-radius: 12px; border: none; font-weight: 600; font-size: 14px; background: #f1f5f9; color: #334155; cursor: pointer; transition: 0.2s; }
+        .collection-row .actions .pay { background: #dbeafe; color: #1d4ed8; }
+        .collection-row .actions .refund { background: #fee2e2; color: #b91c1c; }
+
+        .modal-overlay { position: absolute; inset: 0; background: rgba(15,23,42,0.6); backdrop-filter: blur(4px); display: flex; align-items: flex-end; justify-content: center; z-index: 60; animation: fadeIn 0.2s; }
+        .modal-box { background: white; border-radius: 32px 32px 0 0; padding: 28px 24px 40px; width: 100%; box-shadow: 0 -10px 40px rgba(0,0,0,0.1); animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .modal-box .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .modal-box .modal-header h3 { font-weight: 800; color: #0f172a; font-size: 22px; margin: 0; }
+        .modal-box .modal-header button { background: #f1f5f9; border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 18px; color: #64748b; cursor: pointer; }
+        .modal-box label { font-size: 13px; font-weight: 600; color: #475569; display: block; margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .modal-box input { width: 100%; padding: 16px; border: 2px solid #e2e8f0; border-radius: 16px; font-size: 16px; background: #f8fafc; font-weight: 500; transition: 0.2s; }
+        .modal-box input:focus { outline: none; border-color: #4f46e5; background: white; }
+        .modal-box .submit-btn { width: 100%; margin-top: 32px; padding: 16px; border: none; border-radius: 16px; font-weight: 700; font-size: 16px; color: white; background: #4f46e5; cursor: pointer; transition: 0.2s; }
+        .modal-box .submit-btn:active { transform: scale(0.98); background: #4338ca; }
+        .modal-box .submit-btn.red { background: #e11d48; }
+        .modal-box .submit-btn.red:active { background: #be123c; }
+
+        .search-input { width: calc(100% - 32px); margin: 12px 16px 4px; padding: 14px 16px 14px 44px; border-radius: 16px; border: 2px solid #e2e8f0; font-size: 15px; font-weight: 500; background: #f8fafc url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>') no-repeat 16px center; background-size: 18px; transition: 0.2s; }
+        .search-input:focus { outline: none; border-color: #4f46e5; background-color: white; }
+        
+        .section-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px 8px; }
+        .section-header span { font-weight: 800; color: #0f172a; font-size: 22px; letter-spacing: -0.5px; }
+        .section-header button { background: #4f46e5; color: white; border: none; padding: 8px 16px; border-radius: 40px; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; cursor: pointer; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2); }
+        .section-header button.red-bg { background: #e11d48; box-shadow: 0 4px 10px rgba(225, 29, 72, 0.2); }
+    </style>
+</head>
+<body>
+<div class="app-wrapper" id="app">
+    <div class="content-area" id="contentArea"></div>
+    
+    <div class="bottom-nav">
+        <button class="nav-btn active" data-tab="dashboard"><i class="fas fa-chart-pie"></i><span>Итоги</span></button>
+        <button class="nav-btn" data-tab="students"><i class="fas fa-user"></i><span>Ученики</span></button>
+        <button class="nav-btn" data-tab="collections"><i class="fas fa-wallet"></i><span>Сборы</span></button>
+        <button class="nav-btn" data-tab="expenses"><i class="fas fa-receipt"></i><span>Расходы</span></button>
+    </div>
+    
+    <div id="modalContainer"></div>
+    <div id="reportModalContainer"></div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'class-finance-app';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+    let db = null, auth = null, currentUser = null;
+    let isCloudReady = false;
+    let syncStatusText = "Подключение к облаку...";
+
+    if (firebaseConfig) {
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            
+            const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+            if (token) {
+                signInWithCustomToken(auth, token).catch(() => signInAnonymously(auth));
+            } else {
+                signInAnonymously(auth);
+            }
+
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    currentUser = user;
+                    initCloudSync();
+                }
+            });
+        } catch(e) {
+            console.warn("Firebase init error:", e);
+        }
+    }
+
+    (function() {
+        function customAlert(msg) {
+            const overlay = document.createElement('div');
+            overlay.className = 'custom-dialog-overlay';
+            overlay.innerHTML = `<div class="custom-dialog-box"><h3>Внимание</h3><p>${msg}</p><div class="custom-dialog-actions"><button class="btn-confirm" id="dlgOk">Понятно</button></div></div>`;
+            document.body.appendChild(overlay);
+            document.getElementById('dlgOk').onclick = () => overlay.remove();
+        }
+
+        function customConfirm(msg, onConfirm) {
+            const overlay = document.createElement('div');
+            overlay.className = 'custom-dialog-overlay';
+            overlay.innerHTML = `<div class="custom-dialog-box"><h3>Подтверждение</h3><p>${msg}</p><div class="custom-dialog-actions"><button class="btn-cancel" id="dlgCancel">Отмена</button><button class="btn-danger" id="dlgYes">Да, уверен</button></div></div>`;
+            document.body.appendChild(overlay);
+            document.getElementById('dlgCancel').onclick = () => overlay.remove();
+            document.getElementById('dlgYes').onclick = () => { overlay.remove(); onConfirm(); };
+        }
+
+        function customPrompt(msg, defaultVal, onConfirm) {
+            const overlay = document.createElement('div');
+            overlay.className = 'custom-dialog-overlay';
+            overlay.innerHTML = `<div class="custom-dialog-box"><h3>Ввод данных</h3><p>${msg}</p><input type="text" id="dlgInput" value="${defaultVal}"><div class="custom-dialog-actions"><button class="btn-cancel" id="dlgCancel">Отмена</button><button class="btn-confirm" id="dlgYes">Сохранить</button></div></div>`;
+            document.body.appendChild(overlay);
+            document.getElementById('dlgCancel').onclick = () => overlay.remove();
+            document.getElementById('dlgYes').onclick = () => { onConfirm(document.getElementById('dlgInput').value); overlay.remove(); };
+        }
+
+        const DEFAULT_INITIAL_BALANCE = 5619;
+        const DEFAULT_STUDENTS = [
+            { id: 1, name: 'Александрова Аня' }, { id: 2, name: 'Артамонова Всеслава' }, { id: 3, name: 'Волокитина Каролина' },
+            { id: 4, name: 'Гатилов Лёня' }, { id: 5, name: 'Гоголев Вадим' }, { id: 6, name: 'Гурьянова Софья' },
+            { id: 7, name: 'Духарина Дарья' }, { id: 8, name: 'Ерукова Вика' }, { id: 9, name: 'Захряпин Максим' },
+            { id: 10, name: 'Игнатьев Данил' }, { id: 11, name: 'Костин Илья' }, { id: 12, name: 'Малкин Ярослав' },
+            { id: 13, name: 'Мокеев Данил' }, { id: 14, name: 'Морозов Матвей' }, { id: 15, name: 'Мыльников Артем' },
+            { id: 16, name: 'Новиков Владимир' }, { id: 17, name: 'Рузаева Катя' }, { id: 18, name: 'Сосипатрова Вика' },
+            { id: 19, name: 'Старостин Артем' }, { id: 20, name: 'Тигина Дана' }, { id: 21, name: 'Цветкова Кристина' },
+            { id: 22, name: 'Чичкова Яна' }, { id: 23, name: 'Щеглова Ярослава' }, { id: 24, name: 'Ещеркина Полина' },
+            { id: 25, name: 'Семёнова Дарья' }
+        ];
+        const DEFAULT_COLLECTIONS = [
+            { id: 1, title: 'Для директора на букет', amount: 100 }, { id: 2, title: '8.09.25 сбор', amount: 2000 },
+            { id: 3, title: 'Угощения на др 22.09.25', amount: 500 }, { id: 4, title: 'Сбор на подарки НГ 18.12.25', amount: 500 },
+            { id: 5, title: 'Сбор на 8.03 и на нужды', amount: 500 }, { id: 6, title: 'На стол ГФ', amount: 300 }
+        ];
+        
+        function getStudentPlanAmount(studentId, collectionId, defaultAmount) {
+            if (collectionId <= 6) {
+                if (studentId === 24) {
+                    if (collectionId === 2) return 250;
+                    if ([3,4,5].includes(collectionId)) return defaultAmount;
+                    return 0;
+                }
+                if (studentId === 25) { if (collectionId === 6) return defaultAmount; return 0; }
+            }
+            return defaultAmount;
+        }
+
+        function buildInitialPayments(studentsList, collectionsList) {
+            const payments = []; let pid = 1;
+            studentsList.forEach(s => {
+                collectionsList.forEach(c => {
+                    const plan = getStudentPlanAmount(s.id, c.id, c.amount);
+                    if (plan > 0) payments.push({ id: pid++, studentId: s.id, collectionId: c.id, amount: plan, date: '2025-09-01' });
+                });
+            });
+            return payments;
+        }
+
+        const DEFAULT_EXPENSES = [
+            { id: 1, title: '1.09.25 букет ГФ', amount: 2700, date: '2025-09-01' },
+            { id: 2, title: 'Тетради || 44 шт по 12р', amount: 528, date: '2025-09-02' },
+            { id: 3, title: 'Тетради # 132 шт по 11,90', amount: 1832, date: '2025-09-03' }
+        ];
+
+        let students = [], collections = [], payments = [], expenses = [];
+        let nextStudentId = 100, currentInitialBalance = DEFAULT_INITIAL_BALANCE;
+        let currentTab = 'dashboard', selectedStudent = null, searchQuery = '';
+
+        function saveState() {
+            try {
+                const stateData = { students, collections, payments, expenses, nextStudentId, currentInitialBalance };
+                localStorage.setItem('classFinanceState', JSON.stringify(stateData));
+                
+                if (db && currentUser && isCloudReady) {
+                    syncStatusText = "Синхронизация...";
+                    updateSyncBadge();
+                    // ИСПОЛЬЗУЕМ СТРОГО РАЗРЕШЕННЫЙ ПУТЬ ДЛЯ ПУБЛИЧНЫХ ДАННЫХ ПРИЛОЖЕНИЯ
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'class_fund', 'main_state');
+                    setDoc(docRef, stateData).then(() => {
+                        syncStatusText = "Данные в облаке";
+                        updateSyncBadge();
+                    }).catch(err => {
+                        console.warn("Cloud save error:", err);
+                        syncStatusText = "Ошибка облака";
+                        updateSyncBadge();
+                    });
+                }
+            } catch(e) { console.warn('Save error', e); }
+        }
+
+        function loadState() {
+            try {
+                const raw = localStorage.getItem('classFinanceState');
+                if (!raw) return false;
+                const state = JSON.parse(raw);
+                students = state.students || []; collections = state.collections || [];
+                payments = state.payments || []; expenses = state.expenses || [];
+                nextStudentId = state.nextStudentId || 100;
+                currentInitialBalance = state.currentInitialBalance !== undefined ? state.currentInitialBalance : DEFAULT_INITIAL_BALANCE;
+                return true;
+            } catch(e) { return false; }
+        }
+
+        if (!loadState()) {
+            students = [...DEFAULT_STUDENTS]; collections = [...DEFAULT_COLLECTIONS];
+            payments = buildInitialPayments(students, collections); expenses = [...DEFAULT_EXPENSES];
+            saveState();
+        }
+
+        window.initCloudSync = function() {
+            if (!db || !currentUser) return;
+            // ИСПОЛЬЗУЕМ СТРОГО РАЗРЕШЕННЫЙ ПУТЬ
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'class_fund', 'main_state');
+            
+            getDoc(docRef).then(docSnap => {
+                if (docSnap.exists()) {
+                    const cloudData = docSnap.data();
+                    if (cloudData && cloudData.students && cloudData.students.length > 0) {
+                        students = cloudData.students || students;
+                        collections = cloudData.collections || collections;
+                        payments = cloudData.payments || payments;
+                        expenses = cloudData.expenses || expenses;
+                        nextStudentId = cloudData.nextStudentId || nextStudentId;
+                        currentInitialBalance = cloudData.currentInitialBalance !== undefined ? cloudData.currentInitialBalance : currentInitialBalance;
+                        isCloudReady = true;
+                        syncStatusText = "Данные в облаке";
+                        render();
+                    } else {
+                        isCloudReady = true;
+                        saveState();
+                    }
+                } else {
+                    isCloudReady = true;
+                    saveState();
+                }
+            }).catch(err => {
+                console.warn("Cloud load error:", err);
+                isCloudReady = true;
+                syncStatusText = "Ошибка доступа к облаку";
+                updateSyncBadge();
+            });
+
+            onSnapshot(docRef, (docSnap) => {
+                if (docSnap.exists() && isCloudReady) {
+                    const cloudData = docSnap.data();
+                    if (cloudData && JSON.stringify(cloudData.expenses) !== JSON.stringify(expenses)) {
+                        students = cloudData.students || students;
+                        collections = cloudData.collections || collections;
+                        payments = cloudData.payments || payments;
+                        expenses = cloudData.expenses || expenses;
+                        nextStudentId = cloudData.nextStudentId || nextStudentId;
+                        currentInitialBalance = cloudData.currentInitialBalance !== undefined ? cloudData.currentInitialBalance : currentInitialBalance;
+                        localStorage.setItem('classFinanceState', JSON.stringify(cloudData));
+                        syncStatusText = "Данные в облаке";
+                        render();
+                    }
+                }
+            }, (error) => {
+                console.warn("Snapshot error:", error);
+            });
+        };
+
+        function updateSyncBadge() {
+            const badge = document.getElementById('cloudBadge');
+            if (badge) {
+                let statusClass = '';
+                if (syncStatusText.includes('Синхронизация')) statusClass = 'syncing';
+                if (syncStatusText.includes('Ошибка')) statusClass = 'error';
+                badge.className = `cloud-badge ${statusClass}`;
+                badge.innerHTML = `<i class="fas ${statusClass === 'error' ? 'fa-exclamation-triangle' : 'fa-cloud'}"></i> ${syncStatusText}`;
+            }
+        }
+
+        function getTotalCollected() { return payments.reduce((s, p) => s + p.amount, 0); }
+        function getTotalSpent() { return expenses.reduce((s, e) => s + e.amount, 0); }
+        function getBalance() { return currentInitialBalance + getTotalCollected() - getTotalSpent(); }
+        function getStudentTotalPlan(studentId) { let total = 0; collections.forEach(c => total += getStudentPlanAmount(studentId, c.id, c.amount)); return total; }
+        function getStudentPaid(studentId) { return payments.filter(p => p.studentId === studentId).reduce((s, p) => s + p.amount, 0); }
+        function getStudentDebt(studentId) { return getStudentTotalPlan(studentId) - getStudentPaid(studentId); }
+        function getCollectionCollected(collectionId) { return payments.filter(p => p.collectionId === collectionId).reduce((s, p) => s + p.amount, 0); }
+        function getCollectionPlanTotal(collectionId) { let total = 0; students.forEach(s => total += getStudentPlanAmount(s.id, collectionId, collections.find(c => c.id === collectionId)?.amount || 0)); return total; }
+        function getStudentCollectionPaid(studentId, collectionId) { return payments.filter(p => p.studentId === studentId && p.collectionId === collectionId).reduce((s, p) => s + p.amount, 0); }
+
+        const contentEl = document.getElementById('contentArea');
+        const modalContainer = document.getElementById('modalContainer');
+        const reportModalContainer = document.getElementById('reportModalContainer');
+
+        function render() {
+            if (selectedStudent) { renderProfile(); return; }
+            switch (currentTab) {
+                case 'dashboard': renderDashboard(); break;
+                case 'students': renderStudents(); break;
+                case 'collections': renderCollections(); break;
+                case 'expenses': renderExpenses(); break;
+                default: renderDashboard();
+            }
+        }
+
+        function renderDashboard() {
+            const balance = getBalance(), collected = getTotalCollected(), spent = getTotalSpent();
+            contentEl.innerHTML = `
+                <div class="dashboard-header">
+                    <h1>Обзор</h1>
+                    <button class="settings-btn" id="settingsBtn"><i class="fas fa-cog"></i></button>
+                </div>
+                
+                <div class="settings-menu" id="settingsMenu">
+                    <button class="settings-item" id="exportDataBtn"><i class="fas fa-cloud-download-alt text-blue-500"></i> Скачать бэкап</button>
+                    <button class="settings-item" id="importDataBtn"><i class="fas fa-cloud-upload-alt text-green-500"></i> Загрузить бэкап</button>
+                    <div style="height: 1px; background: #e2e8f0; margin: 4px 0;"></div>
+                    <button class="settings-item danger" id="resetBtn"><i class="fas fa-undo-alt"></i> Новый учебный год</button>
+                    <input type="file" id="fileInput" class="hidden-input" accept=".json">
+                </div>
+
+                <div class="cloud-badge" id="cloudBadge"><i class="fas fa-cloud"></i> ${syncStatusText}</div>
+
+                <div class="balance-hero">
+                    <div class="label">Остаток в кассе</div>
+                    <div class="amount">${balance.toLocaleString('ru-RU')} <span>₽</span></div>
+                    <i class="fas fa-wallet"></i>
+                </div>
+
+                <div class="quick-actions">
+                    <button class="action-btn" id="qaReport">
+                        <div class="action-icon icon-report"><i class="fas fa-paper-plane"></i></div>
+                        <span>В чат</span>
+                    </button>
+                    <button class="action-btn" id="qaExcel">
+                        <div class="action-icon icon-excel"><i class="fas fa-file-excel"></i></div>
+                        <span>Excel</span>
+                    </button>
+                    <button class="action-btn" id="qaCollect">
+                        <div class="action-icon icon-collect"><i class="fas fa-plus"></i></div>
+                        <span>Сбор</span>
+                    </button>
+                    <button class="action-btn" id="qaExpense">
+                        <div class="action-icon icon-expense"><i class="fas fa-minus"></i></div>
+                        <span>Расход</span>
+                    </button>
+                </div>
+
+                <div class="section-title">Статистика</div>
+                <div class="stat-grid">
+                    <div class="stat-box">
+                        <div class="stat-label"><i class="fas fa-arrow-up text-green-500"></i> Собрано</div>
+                        <div class="stat-number green">${collected.toLocaleString('ru-RU')} ₽</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label"><i class="fas fa-arrow-down text-red-500"></i> Потрачено</div>
+                        <div class="stat-number red">${spent.toLocaleString('ru-RU')} ₽</div>
+                    </div>
+                    <div class="stat-box" style="grid-column: span 2; flex-direction: row; justify-content: space-between; align-items: center;">
+                        <div class="stat-label"><i class="fas fa-history text-indigo-500"></i> Баланс с прошлого года</div>
+                        <div class="stat-number" style="font-size: 16px;">${currentInitialBalance.toLocaleString('ru-RU')} ₽</div>
+                    </div>
+                </div>
+            `;
+
+            const settingsBtn = document.getElementById('settingsBtn');
+            const settingsMenu = document.getElementById('settingsMenu');
+            settingsBtn?.addEventListener('click', (e) => {
+                e.stopPropagation();
+                settingsMenu.classList.toggle('active');
+            });
+            document.addEventListener('click', () => {
+                settingsMenu?.classList.remove('active');
+            });
+
+            document.getElementById('qaReport')?.addEventListener('click', showReportModal);
+            document.getElementById('qaExcel')?.addEventListener('click', handleExportCSV);
+            document.getElementById('qaCollect')?.addEventListener('click', () => { currentTab = 'collections'; document.querySelectorAll('.nav-btn').forEach((b, i) => b.classList.toggle('active', i === 2)); render(); showModal('newCollection'); });
+            document.getElementById('qaExpense')?.addEventListener('click', () => { currentTab = 'expenses'; document.querySelectorAll('.nav-btn').forEach((b, i) => b.classList.toggle('active', i === 3)); render(); showModal('newExpense'); });
+
+            document.getElementById('resetBtn')?.addEventListener('click', function() {
+                customConfirm('Вы уверены, что хотите начать новый учебный год? Все платежи и расходы будут очищены, сборы также сброшены. Ученики останутся.', () => {
+                    customPrompt('Введите новый начальный баланс (в рублях):', '0', (val) => {
+                        if (val === null || val.trim() === '') return;
+                        const newBal = parseInt(val);
+                        if (isNaN(newBal) || newBal < 0) { customAlert('Введите корректное число.'); return; }
+                        payments = []; expenses = []; collections = [];
+                        currentInitialBalance = newBal;
+                        saveState(); render();
+                        customAlert('Данные сброшены. Начат новый учебный год.');
+                    });
+                });
+            });
+            document.getElementById('exportDataBtn')?.addEventListener('click', exportState);
+            document.getElementById('importDataBtn')?.addEventListener('click', () => document.getElementById('fileInput')?.click());
+            document.getElementById('fileInput')?.addEventListener('change', importState);
+        }
+
+        function renderStudents() {
+            contentEl.innerHTML = `
+                <div class="section-header"><span>Ученики</span><button id="addStudentBtn"><i class="fas fa-user-plus"></i> Добавить</button></div>
+                <input class="search-input" id="studentSearch" placeholder="Поиск по фамилии..." value="${searchQuery}">
+                <div id="studentList" style="margin-top: 12px;"></div>
+            `;
+            updateStudentList();
+            document.getElementById('studentSearch')?.addEventListener('input', function() { searchQuery = this.value; updateStudentList(); });
+            document.getElementById('addStudentBtn')?.addEventListener('click', () => showModal('addStudent'));
+        }
+
+        function updateStudentList() {
+            const list = document.getElementById('studentList'); if (!list) return;
+            const filtered = students.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
+            list.innerHTML = filtered.map(s => `
+                <div class="student-item" data-id="${s.id}">
+                    <div class="name"><span class="avatar">${s.name.charAt(0)}</span> ${s.name}</div>
+                    <div class="debt-badge ${getStudentDebt(s.id) > 0 ? 'positive' : 'zero'}">${getStudentDebt(s.id) > 0 ? `Долг: ${getStudentDebt(s.id)} ₽` : '✅ Сдано'}</div>
+                </div>
+            `).join('');
+            list.querySelectorAll('.student-item').forEach(el => el.addEventListener('click', function() {
+                const found = students.find(s => s.id === parseInt(this.dataset.id));
+                if (found) { selectedStudent = found; render(); }
+            }));
+        }
+
+        function renderCollections() {
+            let html = `<div class="section-header"><span>Сборы</span><button id="newCollectionBtn"><i class="fas fa-plus"></i> Новый сбор</button></div>`;
+            [...collections].reverse().forEach(c => {
+                const collected = getCollectionCollected(c.id);
+                const totalPlan = getCollectionPlanTotal(c.id);
+                const progress = totalPlan > 0 ? Math.min((collected / totalPlan) * 100, 100) : 0;
+                const missing = totalPlan - collected;
+                html += `
+                    <div class="collection-card">
+                        <button class="action-del-btn" style="position:absolute; right:16px; top:16px; background: transparent;" data-id="${c.id}" title="Удалить сбор"><i class="fas fa-trash-alt"></i></button>
+                        <div class="top">
+                            <span class="title" style="max-width: 80%;">${c.title}</span>
+                            <span class="amount">${c.amount} ₽</span>
+                        </div>
+                        <div class="stats">
+                            <span class="collected">Собрано: ${collected} / ${totalPlan} ₽</span>
+                            ${missing > 0 ? `<span class="missing-badge">Недостаёт: ${missing} ₽</span>` : `<span class="fully-paid"><i class="fas fa-check-circle"></i> Собран</span>`}
+                        </div>
+                        <div class="progress-bar"><div class="fill" style="width:${progress}%;"></div></div>
+                    </div>
+                `;
+            });
+            contentEl.innerHTML = html;
+            document.getElementById('newCollectionBtn')?.addEventListener('click', () => showModal('newCollection'));
+
+            document.querySelectorAll('.collection-card .action-del-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.currentTarget.dataset.id);
+                    customConfirm('Удалить этот сбор? Внимание: все связанные с ним платежи учеников также будут удалены!', () => {
+                        collections = collections.filter(x => x.id !== id);
+                        payments = payments.filter(p => p.collectionId !== id);
+                        saveState(); render();
+                    });
+                });
+            });
+        }
+
+        function renderExpenses() {
+            let html = `<div class="section-header"><span>Расходы</span><button id="newExpenseBtn" class="red-bg"><i class="fas fa-minus"></i> Добавить</button></div>`;
+            [...expenses].reverse().forEach(e => {
+                html += `
+                    <div class="expense-item">
+                        <div class="info">
+                            <div class="title">${e.title}</div>
+                            <div class="date"><i class="far fa-calendar-alt"></i> ${e.date}</div>
+                        </div>
+                        <div class="cost">-${e.amount} ₽</div>
+                        <div style="display:flex; gap:6px;">
+                            <button class="action-edit-btn" data-id="${e.id}" title="Редактировать"><i class="fas fa-pen" style="font-size: 13px;"></i></button>
+                            <button class="action-del-btn" data-id="${e.id}" title="Удалить"><i class="fas fa-trash-alt" style="font-size: 14px;"></i></button>
+                        </div>
+                    </div>
+                `;
+            });
+            contentEl.innerHTML = html;
+            document.getElementById('newExpenseBtn')?.addEventListener('click', () => showModal('newExpense'));
+            
+            document.querySelectorAll('.expense-item .action-edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.currentTarget.dataset.id);
+                    const expense = expenses.find(x => x.id === id);
+                    if (expense) showModal('editExpense', expense);
+                });
+            });
+
+            document.querySelectorAll('.expense-item .action-del-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.currentTarget.dataset.id);
+                    customConfirm('Вы уверены, что хотите удалить этот расход?', () => {
+                        expenses = expenses.filter(x => x.id !== id);
+                        saveState(); render();
+                    });
+                });
+            });
+        }
+
+        function renderProfile() {
+            if (!selectedStudent) return;
+            const s = selectedStudent;
+            const studentCollections = collections.filter(c => getStudentPlanAmount(s.id, c.id, c.amount) > 0);
+            let html = `
+                <div class="profile-slide">
+                    <div class="profile-header">
+                        <button id="profileBack"><i class="fas fa-arrow-left"></i></button>
+                        <div><div class="pname">${s.name}</div><div style="font-size:13px;opacity:0.8;">Карточка ученика</div></div>
+                    </div>
+                    <div class="profile-content">
+                        <div style="padding: 0 16px; font-weight:700; color:#475569; font-size:12px; letter-spacing:0.5px; margin: 8px 0 8px;">СТАТУС ПО СБОРАМ</div>
+            `;
+            [...studentCollections].reverse().forEach(c => {
+                const plan = getStudentPlanAmount(s.id, c.id, c.amount);
+                const paid = getStudentCollectionPaid(s.id, c.id);
+                const remaining = plan - paid;
+                const isPaid = remaining <= 0;
+                const progress = plan > 0 ? Math.min((paid / plan) * 100, 100) : 0;
+                html += `
+                    <div class="collection-row">
+                        <div class="row-top">
+                            <span class="col-title">${c.title}</span>
+                            <span class="col-status" style="background:${isPaid ? '#dcfce7' : '#fee2e2'}; color:${isPaid ? '#15803d' : '#b91c1c'}">${isPaid ? '✅ Оплачено' : `Долг: ${remaining} ₽`}</span>
+                        </div>
+                        <div style="font-size:13px; color:#64748b; font-weight: 500;">План: ${plan} ₽ · Сдано: ${paid} ₽</div>
+                        <div class="progress-small"><div class="fill" style="width:${progress}%;"></div></div>
+                        <div class="actions">
+                            ${!isPaid ? `<button class="pay" data-action="pay" data-colid="${c.id}" data-plan="${plan}" data-paid="${paid}">Внести</button>` : ''}
+                            ${paid > 0 ? `<button class="refund" data-action="refund" data-colid="${c.id}" data-plan="${plan}" data-paid="${paid}">Возврат</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div></div>`;
+            contentEl.innerHTML = html;
+            document.getElementById('profileBack')?.addEventListener('click', () => { selectedStudent = null; render(); closeModal(); });
+            document.querySelectorAll('[data-action]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const action = this.dataset.action;
+                    const colId = parseInt(this.dataset.colid);
+                    const collection = collections.find(c => c.id === colId);
+                    if (!collection) return;
+                    const plan = parseInt(this.dataset.plan) || 0;
+                    const paid = parseInt(this.dataset.paid) || 0;
+                    let maxAmount = action === 'pay' ? (plan - paid) : paid;
+                    if (maxAmount <= 0) { customAlert('Невозможно выполнить операцию.'); return; }
+                    showActionModal({ type: action, collection, studentId: selectedStudent.id, maxAmount });
+                });
+            });
+        }
+
+        let currentModalType = null, modalData = null;
+        function showModal(type, data) { currentModalType = type; modalData = data || null; renderModal(); }
+        function closeModal() { currentModalType = null; modalData = null; modalContainer.innerHTML = ''; }
+        function renderModal() {
+            if (!currentModalType) { modalContainer.innerHTML = ''; return; }
+            if (currentModalType === 'newCollection') {
+                modalContainer.innerHTML = `
+                    <div class="modal-overlay" id="modalOverlay">
+                        <div class="modal-box">
+                            <div class="modal-header"><h3>Новый сбор</h3><button id="closeModal"><i class="fas fa-times"></i></button></div>
+                            <label>Название сбора</label><input id="colTitle" placeholder="Например: Подарки на 23 февраля">
+                            <label>Сумма с 1 человека (₽)</label><input id="colAmount" type="number" placeholder="500">
+                            <button class="submit-btn" id="submitCollection">Создать сбор</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('closeModal')?.addEventListener('click', closeModal);
+                document.getElementById('submitCollection')?.addEventListener('click', function() {
+                    const title = document.getElementById('colTitle').value.trim();
+                    const amount = parseInt(document.getElementById('colAmount').value);
+                    if (!title || isNaN(amount) || amount <= 0) { customAlert('Проверьте введенные данные.'); return; }
+                    collections.push({ id: Date.now(), title, amount });
+                    closeModal(); saveState(); render();
+                });
+                setTimeout(() => document.getElementById('colTitle')?.focus(), 100);
+            } else if (currentModalType === 'newExpense' || currentModalType === 'editExpense') {
+                const isEdit = currentModalType === 'editExpense';
+                const expData = isEdit ? modalData : {};
+                const today = new Date().toISOString().slice(0,10);
+                const dateVal = isEdit && expData.date ? expData.date : today;
+                
+                modalContainer.innerHTML = `
+                    <div class="modal-overlay" id="modalOverlay">
+                        <div class="modal-box">
+                            <div class="modal-header"><h3>${isEdit ? 'Редактировать расход' : 'Новый расход'}</h3><button id="closeModal"><i class="fas fa-times"></i></button></div>
+                            <label>На что потратили?</label><input id="expTitle" value="${isEdit ? expData.title : ''}" placeholder="Например: Покупка цветов">
+                            <label>Сумма (₽)</label><input id="expAmount" type="number" value="${isEdit ? expData.amount : ''}" placeholder="1500">
+                            <label>Дата</label><input id="expDate" type="date" value="${dateVal}">
+                            <button class="submit-btn ${isEdit ? '' : 'red'}" id="submitExpense">${isEdit ? 'Сохранить изменения' : 'Списать из кассы'}</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('closeModal')?.addEventListener('click', closeModal);
+                document.getElementById('submitExpense')?.addEventListener('click', function() {
+                    const title = document.getElementById('expTitle').value.trim();
+                    const amount = parseInt(document.getElementById('expAmount').value);
+                    const date = document.getElementById('expDate').value || today;
+                    if (!title || isNaN(amount) || amount <= 0) { customAlert('Проверьте введенные данные.'); return; }
+                    
+                    if (isEdit) {
+                        expData.title = title; expData.amount = amount; expData.date = date;
+                    } else {
+                        expenses.push({ id: Date.now(), title, amount, date });
+                    }
+                    closeModal(); saveState(); render();
+                });
+                setTimeout(() => document.getElementById('expTitle')?.focus(), 100);
+            } else if (currentModalType === 'action' && modalData) {
+                const { type, collection, studentId, maxAmount } = modalData;
+                const isPay = type === 'pay';
+                const label = isPay ? 'Внесение денег' : 'Возврат денег';
+                const btnLabel = isPay ? 'Подтвердить' : 'Оформить возврат';
+                const colorClass = isPay ? '' : 'red';
+                modalContainer.innerHTML = `
+                    <div class="modal-overlay" id="actionModal">
+                        <div class="modal-box">
+                            <div class="modal-header"><h3>${label}</h3><button id="closeAction"><i class="fas fa-times"></i></button></div>
+                            <div style="font-size:15px;color:#334155;margin-bottom:12px; font-weight:500;">Сбор: "${collection.title}"</div>
+                            <label>Сумма (₽) — макс. ${maxAmount}</label>
+                            <input id="actionAmount" type="number" value="${maxAmount}" min="1" max="${maxAmount}">
+                            <button class="submit-btn ${colorClass}" id="submitAction">${btnLabel}</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('closeAction')?.addEventListener('click', closeModal);
+                document.getElementById('submitAction')?.addEventListener('click', function() {
+                    const val = parseInt(document.getElementById('actionAmount').value);
+                    if (isNaN(val) || val <= 0 || val > maxAmount) { customAlert(`Сумма должна быть от 1 до ${maxAmount} ₽`); return; }
+                    const amount = isPay ? val : -val;
+                    payments.push({ id: Date.now() + Math.random()*1000, studentId, collectionId: collection.id, amount, date: new Date().toISOString().slice(0,10) });
+                    closeModal(); saveState(); render();
+                });
+                setTimeout(() => document.getElementById('actionAmount')?.focus(), 100);
+            } else if (currentModalType === 'addStudent') {
+                modalContainer.innerHTML = `
+                    <div class="modal-overlay" id="modalOverlay">
+                        <div class="modal-box">
+                            <div class="modal-header"><h3>Новый ученик</h3><button id="closeModal"><i class="fas fa-times"></i></button></div>
+                            <label>ФИО ученика</label><input id="studentName" placeholder="Иванов Иван">
+                            <button class="submit-btn" id="submitStudent">Добавить в список</button>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('closeModal')?.addEventListener('click', closeModal);
+                document.getElementById('submitStudent')?.addEventListener('click', function() {
+                    const name = document.getElementById('studentName').value.trim();
+                    if (!name) return;
+                    students.push({ id: nextStudentId++, name });
+                    closeModal(); saveState(); render();
+                });
+                setTimeout(() => document.getElementById('studentName')?.focus(), 100);
+            }
+        }
+        function showActionModal(data) { showModal('action', data); }
+
+        function exportState() {
+            const state = { students, collections, payments, expenses, nextStudentId, currentInitialBalance };
+            const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `ClassFinance_Backup_${new Date().toISOString().slice(0,10)}.json`;
+            link.click();
+            document.getElementById('settingsMenu')?.classList.remove('active');
+        }
+        
+        function importState(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const state = JSON.parse(e.target.result);
+                    if (!state.students || !state.collections || !state.payments || !state.expenses) { customAlert('Неверный формат файла.'); return; }
+                    
+                    customConfirm('Загрузка заменит текущие данные. Продолжить?', () => {
+                        students = state.students; collections = state.collections; payments = state.payments; expenses = state.expenses;
+                        nextStudentId = state.nextStudentId || 100;
+                        currentInitialBalance = state.currentInitialBalance !== undefined ? state.currentInitialBalance : DEFAULT_INITIAL_BALANCE;
+                        saveState(); render();
+                        customAlert('Бэкап успешно загружен.');
+                    });
+                } catch(err) { customAlert('Ошибка чтения файла.'); }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+            document.getElementById('settingsMenu')?.classList.remove('active');
+        }
+
+        function showReportModal() {
+            const balance = getBalance(), collected = getTotalCollected(), spent = getTotalSpent();
+            let collectionsRows = '', expensesRows = '';
+            collections.forEach(c => {
+                const planTotal = getCollectionPlanTotal(c.id);
+                const collectedAmount = getCollectionCollected(c.id);
+                const progress = planTotal > 0 ? Math.round((collectedAmount / planTotal) * 100) : 0;
+                collectionsRows += `<tr><td>${c.title}</td><td>${planTotal}</td><td>${collectedAmount}</td><td>${progress}%</td><td style="color:${planTotal - collectedAmount > 0 ? '#b91c1c' : '#15803d'}"><b>${planTotal - collectedAmount > 0 ? planTotal - collectedAmount : '✅'}</b></td></tr>`;
+            });
+            [...expenses].reverse().forEach(e => {
+                expensesRows += `<tr><td>${e.title}</td><td>${e.amount}</td><td>${e.date}</td></tr>`;
+            });
+            reportModalContainer.innerHTML = `
+                <div class="report-modal" id="reportModal">
+                    <div class="report-modal-content" id="reportContent">
+                        <button class="close-btn" id="closeReportBtn"><i class="fas fa-times"></i></button>
+                        <h1>Отчёт по классу</h1>
+                        <p style="color:#64748b; margin-bottom:16px; font-size: 13px;">Сформирован: ${new Date().toLocaleString()}</p>
+                        
+                        <h2>📌 Сборы</h2>
+                        <table><thead><tr><th>Название</th><th>План</th><th>Собрано</th><th>%</th><th>Остаток</th></tr></thead><tbody>${collectionsRows}</tbody></table>
+                        
+                        <h2>🧾 Расходы</h2>
+                        <table><thead><tr><th>Статья</th><th>Сумма</th><th>Дата</th></tr></thead><tbody>${expensesRows}</tbody></table>
+                        
+                        <div class="summary">
+                            <div class="summary-item"><span>💰 Собрано всего:</span> <span>${collected} ₽</span></div>
+                            <div class="summary-item"><span>🧾 Потрачено всего:</span> <span>${spent} ₽</span></div>
+                            <div class="summary-item" style="color: #4f46e5; font-size: 18px; margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 12px;"><span>📌 Остаток:</span> <span>${balance} ₽</span></div>
+                        </div>
+                        
+                        <div class="button-row">
+                            <button class="btn-image" id="screenshotBtn"><i class="fas fa-camera"></i> Скрин</button>
+                            <button class="btn-pdf" id="pdfBtn"><i class="fas fa-file-pdf"></i> PDF</button>
+                            <button class="btn-copy" id="copyReportBtn"><i class="fas fa-copy"></i> Текст</button>
+                            <button class="btn-share" id="shareReportBtn"><i class="fas fa-share-alt"></i> Поделиться</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('closeReportBtn')?.addEventListener('click', () => reportModalContainer.innerHTML = '');
+            document.getElementById('reportModal')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) reportModalContainer.innerHTML = ''; });
+            document.getElementById('copyReportBtn')?.addEventListener('click', copyReportText);
+            document.getElementById('shareReportBtn')?.addEventListener('click', shareReport);
+            document.getElementById('screenshotBtn')?.addEventListener('click', takeScreenshot);
+            document.getElementById('pdfBtn')?.addEventListener('click', generatePDF);
+        }
+
+        function copyReportText() {
+            let text = '📊 Отчёт по классу\n' + `Сформирован: ${new Date().toLocaleString()}\n\n` + '📌 Сборы:\n';
+            collections.forEach(c => { const plan = getCollectionPlanTotal(c.id); const collected = getCollectionCollected(c.id); text += `${c.title}: ${collected}/${plan} ₽ (${Math.round((collected/plan)*100)}%)\n`; });
+            text += '\n🧾 Расходы:\n';
+            [...expenses].reverse().forEach(e => { text += `${e.title}: ${e.amount} ₽ (${e.date})\n`; });
+            text += `\n💰 Собрано всего: ${getTotalCollected()} ₽\n🧾 Потрачено всего: ${getTotalSpent()} ₽\n📌 Остаток: ${getBalance()} ₽`;
+            if (navigator.clipboard) { navigator.clipboard.writeText(text).then(() => customAlert('Отчёт скопирован!')).catch(() => fallbackCopy(text)); } else { fallbackCopy(text); }
+        }
+        function fallbackCopy(text) {
+            const textarea = document.createElement('textarea'); textarea.value = text; document.body.appendChild(textarea);
+            textarea.select(); document.execCommand('copy'); document.body.removeChild(textarea);
+            customAlert('Отчёт скопирован!');
+        }
+
+        function shareReport() {
+            let text = '📊 Отчёт по классу\n' + new Date().toLocaleString() + '\n\n📌 Сборы:\n';
+            collections.forEach(c => { const plan = getCollectionPlanTotal(c.id); const collected = getCollectionCollected(c.id); text += `${c.title}: ${collected}/${plan} ₽ (${Math.round((collected/plan)*100)}%)\n`; });
+            text += '\n🧾 Расходы:\n';
+            [...expenses].reverse().forEach(e => { text += `${e.title}: ${e.amount} ₽ (${e.date})\n`; });
+            text += `\n💰 Собрано: ${getTotalCollected()} ₽\n🧾 Потрачено: ${getTotalSpent()} ₽\n📌 Остаток: ${getBalance()} ₽`;
+            if (navigator.share) { navigator.share({ title: 'Отчёт', text }).catch(() => {}); } else { copyReportText(); }
+        }
+
+        function takeScreenshot() {
+            const content = document.getElementById('reportContent'); if (!content) return;
+            const buttonRow = content.querySelector('.button-row'); const closeBtn = content.querySelector('.close-btn');
+            if (buttonRow) buttonRow.style.display = 'none'; if (closeBtn) closeBtn.style.display = 'none';
+            html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+                if (buttonRow) buttonRow.style.display = ''; if (closeBtn) closeBtn.style.display = '';
+                canvas.toBlob(function(blob) {
+                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], 'report.png', { type: 'image/png' })] })) {
+                        navigator.share({ title: 'Отчёт', files: [new File([blob], 'report.png', { type: 'image/png' })] }).catch(() => {});
+                    } else {
+                        const link = document.createElement('a'); link.download = `Report_${new Date().toISOString().slice(0,10)}.png`;
+                        link.href = URL.createObjectURL(blob); link.click();
+                    }
+                }, 'image/png');
+            }).catch(err => {
+                customAlert('Не удалось создать скриншот.');
+                if (buttonRow) buttonRow.style.display = ''; if (closeBtn) closeBtn.style.display = '';
+            });
+        }
+
+        function generatePDF() {
+            const content = document.getElementById('reportContent'); if (!content) return;
+            const buttonRow = content.querySelector('.button-row'); const closeBtn = content.querySelector('.close-btn');
+            if (buttonRow) buttonRow.style.display = 'none'; if (closeBtn) closeBtn.style.display = 'none';
+            html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
+                if (buttonRow) buttonRow.style.display = ''; if (closeBtn) closeBtn.style.display = '';
+                const imgData = canvas.toDataURL('image/png'); const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+                const pdfWidth = 210; const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                pdf.save(`Report_${new Date().toISOString().slice(0,10)}.pdf`);
+            }).catch(err => {
+                customAlert('Не удалось создать PDF.');
+                if (buttonRow) buttonRow.style.display = ''; if (closeBtn) closeBtn.style.display = '';
+            });
+        }
+
+        function handleExportCSV() {
+            let rows = []; const colTitles = collections.map(c => c.title);
+            rows.push(['ФИО', ...colTitles, 'Сумма долга']);
+            students.forEach(s => {
+                let row = [s.name], debt = 0;
+                collections.forEach(c => {
+                    const plan = getStudentPlanAmount(s.id, c.id, c.amount);
+                    const paid = payments.filter(p => p.studentId === s.id && p.collectionId === c.id).reduce((sum, p) => sum + p.amount, 0);
+                    row.push(paid);
+                    debt += (plan > paid) ? (plan - paid) : 0;
+                });
+                row.push(debt > 0 ? debt : 0); rows.push(row);
+            });
+            rows.push([]); rows.push(['РАСХОДЫ', 'Сумма', 'Дата']);
+            [...expenses].reverse().forEach(e => rows.push([e.title, e.amount, e.date]));
+            rows.push([]); rows.push(['Остаток с прошлого года', currentInitialBalance]);
+            rows.push(['Всего собрано', getTotalCollected()]); rows.push(['Всего потрачено', getTotalSpent()]);
+            rows.push(['ТЕКУЩИЙ ОСТАТОК', getBalance()]);
+            const csv = '\uFEFF' + rows.map(r => r.join(';')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
+            link.download = `Kassa_${new Date().toISOString().slice(0,10)}.csv`; link.click();
+        }
+
+        function initNav() {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tab = this.dataset.tab;
+                    if (selectedStudent) selectedStudent = null;
+                    currentTab = tab;
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    closeModal(); render();
+                });
+            });
+        }
+
+        initNav();
+        render();
+        document.querySelector(`.nav-btn[data-tab="${currentTab}"]`)?.classList.add('active');
+    })();
+</script>
+</body>
+</html>
