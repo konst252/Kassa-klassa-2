@@ -47,9 +47,12 @@
         .settings-item.danger { color: #dc2626; }
         .settings-item i { width: 20px; text-align: center; font-size: 16px; }
 
-        .cloud-badge { display: flex; align-items: center; gap: 6px; padding: 6px 14px; margin: 0 16px 12px; background: #e0e7ff; color: #4f46e5; border-radius: 20px; font-size: 12px; font-weight: 600; width: fit-content; transition: 0.2s; }
-        .cloud-badge.syncing { background: #fef3c7; color: #d97706; }
-        .cloud-badge.error { background: #fee2e2; color: #dc2626; }
+        /* Стили для бейджа бэкапа */
+        .backup-badge { display: flex; align-items: center; gap: 6px; padding: 6px 14px; margin: 0 16px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; width: fit-content; transition: 0.2s; cursor: pointer; border: 1px solid transparent; }
+        .backup-badge:active { transform: scale(0.95); }
+        .backup-badge.needed { background: #fff1f2; color: #e11d48; border-color: #fecdd3; animation: pulse 2s infinite; }
+        .backup-badge.done { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.03); } 100% { transform: scale(1); } }
 
         .balance-hero { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; border-radius: 28px; padding: 24px 22px; margin: 4px 16px 20px; position: relative; overflow: hidden; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3); }
         .balance-hero::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%); pointer-events: none; }
@@ -220,42 +223,7 @@
     <div id="reportModalContainer"></div>
 </div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'class-finance-app';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-
-    let db = null, auth = null, currentUser = null;
-    let isCloudReady = false;
-    let syncStatusText = "Подключение к облаку...";
-
-    if (firebaseConfig) {
-        try {
-            const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-            
-            const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-            if (token) {
-                signInWithCustomToken(auth, token).catch(() => signInAnonymously(auth));
-            } else {
-                signInAnonymously(auth);
-            }
-
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    currentUser = user;
-                    initCloudSync();
-                }
-            });
-        } catch(e) {
-            console.warn("Firebase init error:", e);
-        }
-    }
-
+<script>
     (function() {
         function customAlert(msg) {
             const overlay = document.createElement('div');
@@ -333,26 +301,37 @@
         let students = [], collections = [], payments = [], expenses = [];
         let nextStudentId = 100, currentInitialBalance = DEFAULT_INITIAL_BALANCE;
         let currentTab = 'dashboard', selectedStudent = null, searchQuery = '';
+        
+        // Переменная для отслеживания несохраненных в бэкап изменений
+        let needsBackup = false;
+
+        function updateBackupBadge() {
+            const badge = document.getElementById('backupBadge');
+            if (badge) {
+                if (needsBackup) {
+                    badge.className = 'backup-badge needed';
+                    badge.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ⚠️ Сохраните бэкап!';
+                } else {
+                    badge.className = 'backup-badge done';
+                    badge.innerHTML = '<i class="fas fa-check-circle"></i> Бэкап актуален';
+                }
+            }
+        }
+
+        // Слушатель для предупреждения при закрытии вкладки
+        window.addEventListener('beforeunload', function (e) {
+            if (needsBackup) {
+                e.preventDefault();
+                e.returnValue = 'У вас есть несохраненные данные. Рекомендуем сделать бэкап перед выходом!';
+            }
+        });
 
         function saveState() {
             try {
                 const stateData = { students, collections, payments, expenses, nextStudentId, currentInitialBalance };
                 localStorage.setItem('classFinanceState', JSON.stringify(stateData));
-                
-                if (db && currentUser && isCloudReady) {
-                    syncStatusText = "Синхронизация...";
-                    updateSyncBadge();
-                    // ИСПОЛЬЗУЕМ СТРОГО РАЗРЕШЕННЫЙ ПУТЬ ДЛЯ ПУБЛИЧНЫХ ДАННЫХ ПРИЛОЖЕНИЯ
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'class_fund', 'main_state');
-                    setDoc(docRef, stateData).then(() => {
-                        syncStatusText = "Данные в облаке";
-                        updateSyncBadge();
-                    }).catch(err => {
-                        console.warn("Cloud save error:", err);
-                        syncStatusText = "Ошибка облака";
-                        updateSyncBadge();
-                    });
-                }
+                needsBackup = true;
+                updateBackupBadge();
             } catch(e) { console.warn('Save error', e); }
         }
 
@@ -365,6 +344,7 @@
                 payments = state.payments || []; expenses = state.expenses || [];
                 nextStudentId = state.nextStudentId || 100;
                 currentInitialBalance = state.currentInitialBalance !== undefined ? state.currentInitialBalance : DEFAULT_INITIAL_BALANCE;
+                needsBackup = false; // При загрузке бэкап пока не нужен
                 return true;
             } catch(e) { return false; }
         }
@@ -373,70 +353,6 @@
             students = [...DEFAULT_STUDENTS]; collections = [...DEFAULT_COLLECTIONS];
             payments = buildInitialPayments(students, collections); expenses = [...DEFAULT_EXPENSES];
             saveState();
-        }
-
-        window.initCloudSync = function() {
-            if (!db || !currentUser) return;
-            // ИСПОЛЬЗУЕМ СТРОГО РАЗРЕШЕННЫЙ ПУТЬ
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'class_fund', 'main_state');
-            
-            getDoc(docRef).then(docSnap => {
-                if (docSnap.exists()) {
-                    const cloudData = docSnap.data();
-                    if (cloudData && cloudData.students && cloudData.students.length > 0) {
-                        students = cloudData.students || students;
-                        collections = cloudData.collections || collections;
-                        payments = cloudData.payments || payments;
-                        expenses = cloudData.expenses || expenses;
-                        nextStudentId = cloudData.nextStudentId || nextStudentId;
-                        currentInitialBalance = cloudData.currentInitialBalance !== undefined ? cloudData.currentInitialBalance : currentInitialBalance;
-                        isCloudReady = true;
-                        syncStatusText = "Данные в облаке";
-                        render();
-                    } else {
-                        isCloudReady = true;
-                        saveState();
-                    }
-                } else {
-                    isCloudReady = true;
-                    saveState();
-                }
-            }).catch(err => {
-                console.warn("Cloud load error:", err);
-                isCloudReady = true;
-                syncStatusText = "Ошибка доступа к облаку";
-                updateSyncBadge();
-            });
-
-            onSnapshot(docRef, (docSnap) => {
-                if (docSnap.exists() && isCloudReady) {
-                    const cloudData = docSnap.data();
-                    if (cloudData && JSON.stringify(cloudData.expenses) !== JSON.stringify(expenses)) {
-                        students = cloudData.students || students;
-                        collections = cloudData.collections || collections;
-                        payments = cloudData.payments || payments;
-                        expenses = cloudData.expenses || expenses;
-                        nextStudentId = cloudData.nextStudentId || nextStudentId;
-                        currentInitialBalance = cloudData.currentInitialBalance !== undefined ? cloudData.currentInitialBalance : currentInitialBalance;
-                        localStorage.setItem('classFinanceState', JSON.stringify(cloudData));
-                        syncStatusText = "Данные в облаке";
-                        render();
-                    }
-                }
-            }, (error) => {
-                console.warn("Snapshot error:", error);
-            });
-        };
-
-        function updateSyncBadge() {
-            const badge = document.getElementById('cloudBadge');
-            if (badge) {
-                let statusClass = '';
-                if (syncStatusText.includes('Синхронизация')) statusClass = 'syncing';
-                if (syncStatusText.includes('Ошибка')) statusClass = 'error';
-                badge.className = `cloud-badge ${statusClass}`;
-                badge.innerHTML = `<i class="fas ${statusClass === 'error' ? 'fa-exclamation-triangle' : 'fa-cloud'}"></i> ${syncStatusText}`;
-            }
         }
 
         function getTotalCollected() { return payments.reduce((s, p) => s + p.amount, 0); }
@@ -473,14 +389,14 @@
                 </div>
                 
                 <div class="settings-menu" id="settingsMenu">
-                    <button class="settings-item" id="exportDataBtn"><i class="fas fa-cloud-download-alt text-blue-500"></i> Скачать бэкап</button>
-                    <button class="settings-item" id="importDataBtn"><i class="fas fa-cloud-upload-alt text-green-500"></i> Загрузить бэкап</button>
+                    <button class="settings-item" id="exportDataBtn"><i class="fas fa-file-download text-blue-500"></i> Скачать бэкап</button>
+                    <button class="settings-item" id="importDataBtn"><i class="fas fa-file-upload text-green-500"></i> Загрузить бэкап</button>
                     <div style="height: 1px; background: #e2e8f0; margin: 4px 0;"></div>
                     <button class="settings-item danger" id="resetBtn"><i class="fas fa-undo-alt"></i> Новый учебный год</button>
                     <input type="file" id="fileInput" class="hidden-input" accept=".json">
                 </div>
 
-                <div class="cloud-badge" id="cloudBadge"><i class="fas fa-cloud"></i> ${syncStatusText}</div>
+                <div class="backup-badge done" id="backupBadge" title="Нажмите, чтобы скачать бэкап"></div>
 
                 <div class="balance-hero">
                     <div class="label">Остаток в кассе</div>
@@ -524,6 +440,8 @@
                 </div>
             `;
 
+            updateBackupBadge();
+
             const settingsBtn = document.getElementById('settingsBtn');
             const settingsMenu = document.getElementById('settingsMenu');
             settingsBtn?.addEventListener('click', (e) => {
@@ -534,6 +452,7 @@
                 settingsMenu?.classList.remove('active');
             });
 
+            document.getElementById('backupBadge')?.addEventListener('click', exportState);
             document.getElementById('qaReport')?.addEventListener('click', showReportModal);
             document.getElementById('qaExcel')?.addEventListener('click', handleExportCSV);
             document.getElementById('qaCollect')?.addEventListener('click', () => { currentTab = 'collections'; document.querySelectorAll('.nav-btn').forEach((b, i) => b.classList.toggle('active', i === 2)); render(); showModal('newCollection'); });
@@ -823,7 +742,13 @@
             link.href = URL.createObjectURL(blob);
             link.download = `ClassFinance_Backup_${new Date().toISOString().slice(0,10)}.json`;
             link.click();
+            
+            // Снимаем флаг потребности в бэкапе
+            needsBackup = false;
+            updateBackupBadge();
+            
             document.getElementById('settingsMenu')?.classList.remove('active');
+            setTimeout(() => customAlert('Бэкап успешно скачан! Вы можете закрывать вкладку без риска потери данных.'), 300);
         }
         
         function importState(event) {
@@ -839,7 +764,9 @@
                         students = state.students; collections = state.collections; payments = state.payments; expenses = state.expenses;
                         nextStudentId = state.nextStudentId || 100;
                         currentInitialBalance = state.currentInitialBalance !== undefined ? state.currentInitialBalance : DEFAULT_INITIAL_BALANCE;
-                        saveState(); render();
+                        saveState(); 
+                        needsBackup = false; updateBackupBadge(); // После импорта бэкап не нужен
+                        render();
                         customAlert('Бэкап успешно загружен.');
                     });
                 } catch(err) { customAlert('Ошибка чтения файла.'); }
