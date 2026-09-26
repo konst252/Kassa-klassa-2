@@ -9,8 +9,6 @@
     <title>Классный фонд</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
     <style>
@@ -20,7 +18,6 @@
             max-width: 420px; width: 100%; background: #f8fafc; border-radius: 32px;
             box-shadow: 0 20px 40px rgba(0,0,0,0.08); overflow: hidden; position: relative;
             height: 780px; display: flex; flex-direction: column; border: 1px solid rgba(226,232,240,0.6);
-            transition: transform 0.2s ease;
         }
         .content-area { flex: 1; overflow-y: auto; padding-bottom: 80px; scroll-behavior: smooth; }
 
@@ -45,9 +42,7 @@
         .settings-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; background: transparent; border: none; width: 100%; text-align: left; font-size: 14px; font-weight: 500; color: #334155; cursor: pointer; transition: 0.2s; }
         .settings-item:hover { background: #f8fafc; }
         .settings-item.danger { color: #dc2626; }
-        .settings-item i { width: 20px; text-align: center; font-size: 16px; }
 
-        /* Стили для бейджа бэкапа */
         .backup-badge { display: flex; align-items: center; gap: 6px; padding: 6px 14px; margin: 0 16px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; width: fit-content; transition: 0.2s; cursor: pointer; border: 1px solid transparent; }
         .backup-badge:active { transform: scale(0.95); }
         .backup-badge.needed { background: #fff1f2; color: #e11d48; border-color: #fecdd3; animation: pulse 2s infinite; }
@@ -76,11 +71,9 @@
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 16px 12px; }
         .stat-box { background: white; border-radius: 20px; padding: 16px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 6px; }
         .stat-box .stat-label { color: #64748b; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-        .stat-box .stat-label i { font-size: 16px; }
         .stat-box .stat-number { font-size: 20px; font-weight: 700; color: #0f172a; }
         .stat-box .stat-number.green { color: #16a34a; }
         .stat-box .stat-number.red { color: #dc2626; }
-
         .hidden-input { display: none; }
 
         .student-item {
@@ -90,28 +83,15 @@
         }
         .student-item:active { transform: scale(0.98); background: #fafcff; }
         .student-item .name { font-weight: 500; color: #0f172a; display: flex; align-items: center; gap: 10px; }
-        .student-item .name .avatar {
-            width: 34px; height: 34px; background: #e0e7ff; color: #4f46e5;
-            border-radius: 40px; display: flex; align-items: center; justify-content: center;
-            font-weight: 600; font-size: 14px;
-        }
+        .student-item .name .avatar { width: 34px; height: 34px; background: #e0e7ff; color: #4f46e5; border-radius: 40px; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
         .student-item .debt-badge { font-size: 13px; font-weight: 600; padding: 4px 12px; border-radius: 40px; }
         .debt-badge.positive { background: #fee2e2; color: #b91c1c; }
         .debt-badge.zero { background: #dcfce7; color: #15803d; }
 
-        .collection-card {
-            background: white; border-radius: 18px; padding: 16px;
-            margin: 8px 12px; border: 1px solid #eff2f9; position: relative;
-        }
-        .collection-card .top {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 8px; padding-right: 28px;
-        }
+        .collection-card { background: white; border-radius: 18px; padding: 16px; margin: 8px 12px; border: 1px solid #eff2f9; position: relative; }
+        .collection-card .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-right: 64px; }
         .collection-card .title { font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; }
-        .collection-card .amount {
-            background: #f1f5f9; padding: 4px 12px; border-radius: 40px;
-            font-weight: 600; color: #334155; font-size: 13px; white-space: nowrap;
-        }
+        .collection-card .amount { background: #f1f5f9; padding: 4px 12px; border-radius: 40px; font-weight: 600; color: #334155; font-size: 13px; white-space: nowrap; }
         .progress-bar { height: 8px; background: #f1f5f9; border-radius: 10px; margin: 12px 0 6px; overflow: hidden; }
         .progress-bar .fill { height: 100%; background: #4f46e5; border-radius: 10px; transition: width 0.4s ease; }
         .collection-card .stats { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #475569; }
@@ -119,11 +99,7 @@
         .collection-card .stats .missing-badge { background: #fef2f2; color: #b91c1c; padding: 3px 10px; border-radius: 40px; font-weight: 600; font-size: 12px; }
         .collection-card .stats .fully-paid { color: #15803d; display: flex; align-items: center; gap: 4px; font-weight: 600; }
 
-        .expense-item {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 14px 16px; background: white; border-radius: 18px;
-            margin: 8px 12px; border: 1px solid #f0f4fc; border-left: 5px solid #e11d48;
-        }
+        .expense-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: white; border-radius: 18px; margin: 8px 12px; border: 1px solid #f0f4fc; border-left: 5px solid #e11d48; }
         .expense-item .info { flex: 1; min-width: 0; }
         .expense-item .info .title { font-weight: 500; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; }
         .expense-item .info .date { font-size: 12px; color: #64748b; margin-top: 2px; }
@@ -162,12 +138,9 @@
         .report-modal-content .summary { display: flex; flex-wrap: wrap; gap: 12px; background: #f8fafc; padding: 16px; border-radius: 20px; margin-top: 20px; border: 1px solid #e2e8f0; }
         .report-modal-content .summary-item { font-weight: 600; font-size: 15px; color: #0f172a; width: 100%; display: flex; justify-content: space-between; }
         .report-modal-content .button-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; justify-content: center; }
-        .report-modal-content .button-row button { flex: 1; min-width: 100px; padding: 12px 14px; border: none; border-radius: 16px; font-weight: 600; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
+        .report-modal-content .button-row button { flex: 1; min-width: 120px; padding: 12px 14px; border: none; border-radius: 16px; font-weight: 600; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
         .report-modal-content .button-row .btn-share { background: #4f46e5; color: white; }
-        .report-modal-content .button-row .btn-download { background: #dcfce7; color: #166534; }
         .report-modal-content .button-row .btn-copy { background: #dbeafe; color: #1e40af; }
-        .report-modal-content .button-row .btn-pdf { background: #fee2e2; color: #991b1b; }
-        .report-modal-content .button-row .btn-image { background: #ffedd5; color: #9a3412; }
 
         .profile-slide { position: absolute; inset: 0; background: #f8fafc; z-index: 40; display: flex; flex-direction: column; animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
@@ -264,9 +237,9 @@
             { id: 25, name: 'Семёнова Дарья' }
         ];
         const DEFAULT_COLLECTIONS = [
-            { id: 1, title: 'Для директора на букет', amount: 100 }, { id: 2, title: '8.09.25 сбор', amount: 2000 },
-            { id: 3, title: 'Угощения на др 22.09.25', amount: 500 }, { id: 4, title: 'Сбор на подарки НГ 18.12.25', amount: 500 },
-            { id: 5, title: 'Сбор на 8.03 и на нужды', amount: 500 }, { id: 6, title: 'На стол ГФ', amount: 300 }
+            { id: 1, title: 'Для директора на букет', amount: 100, date: '2025-09-01' }, { id: 2, title: '8.09.25 сбор', amount: 2000, date: '2025-09-08' },
+            { id: 3, title: 'Угощения на др 22.09.25', amount: 500, date: '2025-09-22' }, { id: 4, title: 'Сбор на подарки НГ 18.12.25', amount: 500, date: '2025-12-18' },
+            { id: 5, title: 'Сбор на 8.03 и на нужды', amount: 500, date: '2026-03-08' }, { id: 6, title: 'На стол ГФ', amount: 300, date: '2026-03-10' }
         ];
         
         function getStudentPlanAmount(studentId, collectionId, defaultAmount) {
@@ -301,8 +274,6 @@
         let students = [], collections = [], payments = [], expenses = [];
         let nextStudentId = 100, currentInitialBalance = DEFAULT_INITIAL_BALANCE;
         let currentTab = 'dashboard', selectedStudent = null, searchQuery = '';
-        
-        // Переменная для отслеживания несохраненных в бэкап изменений
         let needsBackup = false;
 
         function updateBackupBadge() {
@@ -318,7 +289,6 @@
             }
         }
 
-        // Слушатель для предупреждения при закрытии вкладки
         window.addEventListener('beforeunload', function (e) {
             if (needsBackup) {
                 e.preventDefault();
@@ -344,7 +314,7 @@
                 payments = state.payments || []; expenses = state.expenses || [];
                 nextStudentId = state.nextStudentId || 100;
                 currentInitialBalance = state.currentInitialBalance !== undefined ? state.currentInitialBalance : DEFAULT_INITIAL_BALANCE;
-                needsBackup = false; // При загрузке бэкап пока не нужен
+                needsBackup = false;
                 return true;
             } catch(e) { return false; }
         }
@@ -444,13 +414,8 @@
 
             const settingsBtn = document.getElementById('settingsBtn');
             const settingsMenu = document.getElementById('settingsMenu');
-            settingsBtn?.addEventListener('click', (e) => {
-                e.stopPropagation();
-                settingsMenu.classList.toggle('active');
-            });
-            document.addEventListener('click', () => {
-                settingsMenu?.classList.remove('active');
-            });
+            settingsBtn?.addEventListener('click', (e) => { e.stopPropagation(); settingsMenu.classList.toggle('active'); });
+            document.addEventListener('click', () => { settingsMenu?.classList.remove('active'); });
 
             document.getElementById('backupBadge')?.addEventListener('click', exportState);
             document.getElementById('qaReport')?.addEventListener('click', showReportModal);
@@ -511,9 +476,15 @@
                 const missing = totalPlan - collected;
                 html += `
                     <div class="collection-card">
-                        <button class="action-del-btn" style="position:absolute; right:16px; top:16px; background: transparent;" data-id="${c.id}" title="Удалить сбор"><i class="fas fa-trash-alt"></i></button>
-                        <div class="top">
-                            <span class="title" style="max-width: 80%;">${c.title}</span>
+                        <div style="position:absolute; right:12px; top:12px; display:flex; gap:4px;">
+                            <button class="action-edit-btn" data-id="${c.id}" title="Редактировать сбор"><i class="fas fa-pen" style="font-size: 13px;"></i></button>
+                            <button class="action-del-btn" data-id="${c.id}" title="Удалить сбор"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                        <div class="top" style="padding-right: 64px;">
+                            <div style="display: flex; flex-direction: column; max-width: 100%;">
+                                <span class="title" style="max-width: 100%;">${c.title}</span>
+                                <span style="font-size: 12px; color: #64748b; margin-top: 2px;"><i class="far fa-calendar-alt"></i> ${c.date || 'Дата не указана'}</span>
+                            </div>
                             <span class="amount">${c.amount} ₽</span>
                         </div>
                         <div class="stats">
@@ -526,6 +497,14 @@
             });
             contentEl.innerHTML = html;
             document.getElementById('newCollectionBtn')?.addEventListener('click', () => showModal('newCollection'));
+
+            document.querySelectorAll('.collection-card .action-edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.currentTarget.dataset.id);
+                    const collection = collections.find(x => x.id === id);
+                    if (collection) showModal('editCollection', collection);
+                });
+            });
 
             document.querySelectorAll('.collection-card .action-del-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -600,7 +579,10 @@
                 html += `
                     <div class="collection-row">
                         <div class="row-top">
-                            <span class="col-title">${c.title}</span>
+                            <div style="display:flex; flex-direction:column;">
+                                <span class="col-title">${c.title}</span>
+                                <span style="font-size: 11px; color: #94a3b8; margin-top: 2px;"><i class="far fa-calendar-alt"></i> ${c.date || ''}</span>
+                            </div>
                             <span class="col-status" style="background:${isPaid ? '#dcfce7' : '#fee2e2'}; color:${isPaid ? '#15803d' : '#b91c1c'}">${isPaid ? '✅ Оплачено' : `Долг: ${remaining} ₽`}</span>
                         </div>
                         <div style="font-size:13px; color:#64748b; font-weight: 500;">План: ${plan} ₽ · Сдано: ${paid} ₽</div>
@@ -635,14 +617,20 @@
         function closeModal() { currentModalType = null; modalData = null; modalContainer.innerHTML = ''; }
         function renderModal() {
             if (!currentModalType) { modalContainer.innerHTML = ''; return; }
-            if (currentModalType === 'newCollection') {
+            if (currentModalType === 'newCollection' || currentModalType === 'editCollection') {
+                const isEdit = currentModalType === 'editCollection';
+                const colData = isEdit ? modalData : {};
+                const today = new Date().toISOString().slice(0,10);
+                const dateVal = isEdit && colData.date ? colData.date : today;
+                
                 modalContainer.innerHTML = `
                     <div class="modal-overlay" id="modalOverlay">
                         <div class="modal-box">
-                            <div class="modal-header"><h3>Новый сбор</h3><button id="closeModal"><i class="fas fa-times"></i></button></div>
-                            <label>Название сбора</label><input id="colTitle" placeholder="Например: Подарки на 23 февраля">
-                            <label>Сумма с 1 человека (₽)</label><input id="colAmount" type="number" placeholder="500">
-                            <button class="submit-btn" id="submitCollection">Создать сбор</button>
+                            <div class="modal-header"><h3>${isEdit ? 'Редактировать сбор' : 'Новый сбор'}</h3><button id="closeModal"><i class="fas fa-times"></i></button></div>
+                            <label>Название сбора</label><input id="colTitle" value="${isEdit ? colData.title : ''}" placeholder="Например: Подарки на 23 февраля">
+                            <label>Сумма с 1 человека (₽)</label><input id="colAmount" type="number" value="${isEdit ? colData.amount : ''}" placeholder="500">
+                            <label>Дата создания</label><input id="colDate" type="date" value="${dateVal}">
+                            <button class="submit-btn" id="submitCollection">${isEdit ? 'Сохранить изменения' : 'Создать сбор'}</button>
                         </div>
                     </div>
                 `;
@@ -650,8 +638,14 @@
                 document.getElementById('submitCollection')?.addEventListener('click', function() {
                     const title = document.getElementById('colTitle').value.trim();
                     const amount = parseInt(document.getElementById('colAmount').value);
+                    const date = document.getElementById('colDate').value || today;
                     if (!title || isNaN(amount) || amount <= 0) { customAlert('Проверьте введенные данные.'); return; }
-                    collections.push({ id: Date.now(), title, amount });
+                    
+                    if (isEdit) {
+                        colData.title = title; colData.amount = amount; colData.date = date;
+                    } else {
+                        collections.push({ id: Date.now(), title, amount, date });
+                    }
                     closeModal(); saveState(); render();
                 });
                 setTimeout(() => document.getElementById('colTitle')?.focus(), 100);
@@ -743,10 +737,7 @@
             link.download = `ClassFinance_Backup_${new Date().toISOString().slice(0,10)}.json`;
             link.click();
             
-            // Снимаем флаг потребности в бэкапе
-            needsBackup = false;
-            updateBackupBadge();
-            
+            needsBackup = false; updateBackupBadge();
             document.getElementById('settingsMenu')?.classList.remove('active');
             setTimeout(() => customAlert('Бэкап успешно скачан! Вы можете закрывать вкладку без риска потери данных.'), 300);
         }
@@ -765,7 +756,7 @@
                         nextStudentId = state.nextStudentId || 100;
                         currentInitialBalance = state.currentInitialBalance !== undefined ? state.currentInitialBalance : DEFAULT_INITIAL_BALANCE;
                         saveState(); 
-                        needsBackup = false; updateBackupBadge(); // После импорта бэкап не нужен
+                        needsBackup = false; updateBackupBadge(); 
                         render();
                         customAlert('Бэкап успешно загружен.');
                     });
@@ -783,7 +774,8 @@
                 const planTotal = getCollectionPlanTotal(c.id);
                 const collectedAmount = getCollectionCollected(c.id);
                 const progress = planTotal > 0 ? Math.round((collectedAmount / planTotal) * 100) : 0;
-                collectionsRows += `<tr><td>${c.title}</td><td>${planTotal}</td><td>${collectedAmount}</td><td>${progress}%</td><td style="color:${planTotal - collectedAmount > 0 ? '#b91c1c' : '#15803d'}"><b>${planTotal - collectedAmount > 0 ? planTotal - collectedAmount : '✅'}</b></td></tr>`;
+                const dateStr = c.date ? `<br><span style="font-size:11px;color:#94a3b8;">${c.date}</span>` : '';
+                collectionsRows += `<tr><td>${c.title}${dateStr}</td><td>${planTotal}</td><td>${collectedAmount}</td><td>${progress}%</td><td style="color:${planTotal - collectedAmount > 0 ? '#b91c1c' : '#15803d'}"><b>${planTotal - collectedAmount > 0 ? planTotal - collectedAmount : '✅'}</b></td></tr>`;
             });
             [...expenses].reverse().forEach(e => {
                 expensesRows += `<tr><td>${e.title}</td><td>${e.amount}</td><td>${e.date}</td></tr>`;
@@ -808,8 +800,6 @@
                         </div>
                         
                         <div class="button-row">
-                            <button class="btn-image" id="screenshotBtn"><i class="fas fa-camera"></i> Скрин</button>
-                            <button class="btn-pdf" id="pdfBtn"><i class="fas fa-file-pdf"></i> PDF</button>
                             <button class="btn-copy" id="copyReportBtn"><i class="fas fa-copy"></i> Текст</button>
                             <button class="btn-share" id="shareReportBtn"><i class="fas fa-share-alt"></i> Поделиться</button>
                         </div>
@@ -820,8 +810,6 @@
             document.getElementById('reportModal')?.addEventListener('click', (e) => { if (e.target === e.currentTarget) reportModalContainer.innerHTML = ''; });
             document.getElementById('copyReportBtn')?.addEventListener('click', copyReportText);
             document.getElementById('shareReportBtn')?.addEventListener('click', shareReport);
-            document.getElementById('screenshotBtn')?.addEventListener('click', takeScreenshot);
-            document.getElementById('pdfBtn')?.addEventListener('click', generatePDF);
         }
 
         function copyReportText() {
@@ -845,42 +833,6 @@
             [...expenses].reverse().forEach(e => { text += `${e.title}: ${e.amount} ₽ (${e.date})\n`; });
             text += `\n💰 Собрано: ${getTotalCollected()} ₽\n🧾 Потрачено: ${getTotalSpent()} ₽\n📌 Остаток: ${getBalance()} ₽`;
             if (navigator.share) { navigator.share({ title: 'Отчёт', text }).catch(() => {}); } else { copyReportText(); }
-        }
-
-        function takeScreenshot() {
-            const content = document.getElementById('reportContent'); if (!content) return;
-            const buttonRow = content.querySelector('.button-row'); const closeBtn = content.querySelector('.close-btn');
-            if (buttonRow) buttonRow.style.display = 'none'; if (closeBtn) closeBtn.style.display = 'none';
-            html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-                if (buttonRow) buttonRow.style.display = ''; if (closeBtn) closeBtn.style.display = '';
-                canvas.toBlob(function(blob) {
-                    if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], 'report.png', { type: 'image/png' })] })) {
-                        navigator.share({ title: 'Отчёт', files: [new File([blob], 'report.png', { type: 'image/png' })] }).catch(() => {});
-                    } else {
-                        const link = document.createElement('a'); link.download = `Report_${new Date().toISOString().slice(0,10)}.png`;
-                        link.href = URL.createObjectURL(blob); link.click();
-                    }
-                }, 'image/png');
-            }).catch(err => {
-                customAlert('Не удалось создать скриншот.');
-                if (buttonRow) buttonRow.style.display = ''; if (closeBtn) closeBtn.style.display = '';
-            });
-        }
-
-        function generatePDF() {
-            const content = document.getElementById('reportContent'); if (!content) return;
-            const buttonRow = content.querySelector('.button-row'); const closeBtn = content.querySelector('.close-btn');
-            if (buttonRow) buttonRow.style.display = 'none'; if (closeBtn) closeBtn.style.display = 'none';
-            html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' }).then(canvas => {
-                if (buttonRow) buttonRow.style.display = ''; if (closeBtn) closeBtn.style.display = '';
-                const imgData = canvas.toDataURL('image/png'); const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
-                const pdfWidth = 210; const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                pdf.save(`Report_${new Date().toISOString().slice(0,10)}.pdf`);
-            }).catch(err => {
-                customAlert('Не удалось создать PDF.');
-                if (buttonRow) buttonRow.style.display = ''; if (closeBtn) closeBtn.style.display = '';
-            });
         }
 
         function handleExportCSV() {
